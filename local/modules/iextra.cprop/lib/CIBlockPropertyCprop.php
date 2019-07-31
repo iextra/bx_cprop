@@ -154,7 +154,7 @@ class CIBlockPropertyCprop
                 $("#many-fields-table").append('' +
                     '<tr valign="top">' +
                     '<td style="text-align: right;"><input type="text" class="inp-code" size="25"></td>' +
-                    '<td><input type="text" class="inp-title" size="50" name="<?=$inputName?>"></td>' +
+                    '<td><input type="text" class="inp-title" size="50"></td>' +
                     '</tr>');
             }
 
