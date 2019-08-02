@@ -57,9 +57,6 @@ class iextra_cprop extends CModule
         $this->UnInstallFiles();
         $this->UnInstallEvents();
         $this->UnInstallDB();
-        $this->removeSettings();
-
-        CAgent::RemoveModuleAgents($this->MODULE_ID);
     }
 
 

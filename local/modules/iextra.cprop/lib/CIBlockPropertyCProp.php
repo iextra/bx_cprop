@@ -2,7 +2,7 @@
 
 use \Bitrix\Main\Localization\Loc;
 
-class CIBlockPropertyCprop
+class CIBlockPropertyCProp
 {
     static $arFields = [];
     static $showedСss = false;
@@ -17,11 +17,11 @@ class CIBlockPropertyCprop
             'GetPropertyFieldHtml' => array(__CLASS__,  'GetPropertyFieldHtml'),
             'ConvertToDB' => array(__CLASS__, 'ConvertToDB'),
             'ConvertFromDB' => array(__CLASS__,  'ConvertFromDB'),
-            'GetSettingsHTML' =>array(__CLASS__, 'GetSettingsHTML'),
-            'PrepareSettings' =>array(__CLASS__, 'PrepareSettings'),
+            'GetSettingsHTML' => array(__CLASS__, 'GetSettingsHTML'),
+            'PrepareSettings' => array(__CLASS__, 'PrepareSettings'),
+            'GetLength' => array(__CLASS__, 'GetLength'),
         );
     }
-
 
     static function showCss()
     {
@@ -30,10 +30,12 @@ class CIBlockPropertyCprop
             ?>
             <style>
                 .cl{cursor: pointer;}
-                .mf-fields-list{display: none; margin-left: -100px!important; padding: 10px 0;}
+                .mf-gray{color: #797777;}
+                .mf-fields-list{display: none; padding: 10px 0; margin-left: -300px!important;}
                 .mf-fields-list.active{display: block;}
+                .mf-fields-list td:first-child{width: 300px; color: #616060;}
                 .mf-fields-list td:last-child{padding-left: 5px;}
-                .mf-fields-list input[type="text"]{width: 250px!important;}
+                .mf-fields-list input[type="text"]{width: 350px!important;}
             </style>
             <?
         }
@@ -61,6 +63,15 @@ class CIBlockPropertyCprop
                         $(this).text('<?=$showText?>');
                     }
                 });
+
+                $(document).on('click', 'a.mf-delete', function (e) {
+                    e.preventDefault();
+
+                    var inputs = $(this).closest('tr').find('input');
+                    $(inputs).each(function (i, item) {
+                        $(item).val('');
+                    });
+                });
             </script>
             <?
         }
@@ -69,7 +80,8 @@ class CIBlockPropertyCprop
 
     function GetPropertyFieldHtml($arProperty, $value, $strHTMLControlName)
     {
-        $showText = Loc::getMessage('IEX_CPROP_SHOW_TEXT');
+        $hideText = Loc::getMessage('IEX_CPROP_HIDE_TEXT');
+        $clearText = Loc::getMessage('IEX_CPROP_CLEAR_TEXT');
 
         self::showCss();
         self::showJs();
@@ -82,7 +94,8 @@ class CIBlockPropertyCprop
         }
 
 
-        $result = '<div><a class="cl mf-toggle">'.$showText.'</a></div><table class="mf-fields-list">';
+        $result = '<div class="mf-gray"><a class="cl mf-toggle">'.$hideText.'</a> | <a class="cl mf-delete">'.$clearText.'</a></div>
+                    <table class="mf-fields-list active">';
 
         foreach ($arFields as $code => $name){
             $v = !empty($value['VALUE'][$code]) ? $value['VALUE'][$code] : '';
@@ -106,7 +119,11 @@ class CIBlockPropertyCprop
         $arPropertyFields = array(
             'USER_TYPE_SETTINGS_TITLE' => $settingsTitle,
             'HIDE' => array('ROW_COUNT', 'COL_COUNT', 'DEFAULT_VALUE', 'SEARCHABLE', 'SMART_FILTER', 'WITH_DESCRIPTION', 'FILTRABLE', 'MULTIPLE_CNT', 'IS_REQUIRED'),
-            'SET' => array('MULTIPLE_CNT' => 1),
+            'SET' => array(
+                'MULTIPLE_CNT' => 1,
+                'SMART_FILTER' => 'N',
+                'FILTRABLE' => 'N',
+            ),
         );
 
         self::showJsForSetting($strHTMLControlName["NAME"]);
@@ -167,7 +184,6 @@ class CIBlockPropertyCprop
                 else{
                     $(this).closest('tr').find('input.inp-title').attr('name', '<?=$inputName?>[' + xmlId + ']');
                 }
-
             });
         </script>
         <?
@@ -183,7 +199,7 @@ class CIBlockPropertyCprop
             }
         }
 
-        return$result;
+        return $result;
     }
 
     function ConvertToDB($arProperty, $value)
@@ -220,5 +236,16 @@ class CIBlockPropertyCprop
 
         }
         return $return;
+    }
+
+    public static function GetLength($arProperty, $value)
+    {
+        $result = false;
+        foreach($value['VALUE'] as $val){
+            if(!empty($val)){
+                $result = true;
+            }
+        }
+        return $result;
     }
 }
