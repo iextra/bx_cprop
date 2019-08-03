@@ -127,28 +127,44 @@ class CIBlockPropertyCProp
         );
 
         self::showJsForSetting($strHTMLControlName["NAME"]);
+        self::showCssForSetting();
 
-        $result = '<tr><td colspan="2">
-            <table width="100%" id="many-fields-table">        
-                <tr valign="top">
-                   <td style="padding-right: 80px; text-align: right;">XML_ID</td>
-                   <td style="padding-left: 160px;">'.Loc::getMessage('IEX_CPROP_SETTING_FIELD_TITLE').'</td>
+        $result = '<tr><td colspan="2" align="center">
+            <table id="many-fields-table" class="many-fields-table internal">        
+                <tr valign="top" class="heading mf-setting-title">
+                   <td>XML_ID</td>
+                   <td>'.Loc::getMessage('IEX_CPROP_SETTING_FIELD_TITLE').'</td>
+                   <td>'.Loc::getMessage('IEX_CPROP_SETTING_FIELD_SORT').'</td>
+                   <td>'.Loc::getMessage('IEX_CPROP_SETTING_FIELD_TYPE').'</td>
                 </tr>';
 
-        if(!empty($arProperty['USER_TYPE_SETTINGS'])){
-            foreach ($arProperty['USER_TYPE_SETTINGS'] as $code => $value) {
+
+        $arSetting = self::prepareSetting($arProperty['USER_TYPE_SETTINGS']);
+
+        if(!empty($arSetting)){
+            foreach ($arSetting as $code => $arItem) {
                 $result .= '
                        <tr valign="top">
-                           <td style="text-align: right;"><input type="text" class="inp-code" size="25" value="'.$code.'"></td>
-                           <td><input type="text" class="inp-title" size="50" name="'.$strHTMLControlName["NAME"].'['.$code.']" value="'.$value.'"></td>
+                           <td><input type="text" class="inp-code" size="20" value="'.$code.'"></td>
+                           <td><input type="text" class="inp-title" size="35" name="'.$strHTMLControlName["NAME"].'['.$code.'_VALUE]" value="'.$arItem['VALUE'].'"></td>
+                           <td><input type="text" class="inp-sort" size="5" name="'.$strHTMLControlName["NAME"].'['.$code.'_SORT]" value="'.$arItem['SORT'].'"></td>
+                           <td>
+                                <select class="inp-type" name="'.$strHTMLControlName["NAME"].'['.$code.'_TYPE]">
+                                    '.self::getOptionList($arItem['TYPE']).'
+                                </select>                        
+                           </td>
                        </tr>';
             }
         }
 
         $result .= '
                <tr valign="top">
-                    <td style="text-align: right;"><input type="text" class="inp-code" size="25"></td>
-                    <td><input type="text" class="inp-title" size="50"></td>
+                    <td><input type="text" class="inp-code" size="20"></td>
+                    <td><input type="text" class="inp-title" size="35"></td>
+                    <td><input type="text" class="inp-sort" size="5"></td>
+                    <td>
+                        <select class="inp-type"> '.self::getOptionList().'</select>                        
+                    </td>
                </tr>
              </table>   
                 
@@ -162,6 +178,59 @@ class CIBlockPropertyCProp
         return $result;
     }
 
+    static function prepareSetting($arSetting)
+    {
+        $arResult = [];
+
+        foreach ($arSetting as $key => $value){
+            if(strstr($key, '_VALUE') !== false) {
+                $code = str_replace('_VALUE', '', $key);
+                $arResult[$code]['VALUE'] = $value;
+            }
+            else if(strstr($key, '_SORT') !== false) {
+                $code = str_replace('_SORT', '', $key);
+                $arResult[$code]['SORT'] = $value;
+            }
+            else if(strstr($key, '_TYPE') !== false) {
+                $code = str_replace('_TYPE', '', $key);
+                $arResult[$code]['TYPE'] = $value;
+            }
+        }
+
+        function cmp($a, $b)
+        {
+            if ($a['SORT'] == $b['SORT']) {
+                return 0;
+            }
+            return ($a['SORT'] < $b['SORT']) ? -1 : 1;
+        }
+
+        uasort($arResult, "cmp");
+
+        return $arResult;
+    }
+
+    static function getOptionList($selected = 'string')
+    {
+        $result = '';
+        $arOption = [
+            'string' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_STRING'),
+            'file' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_FILE'),
+            'html' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_HTML')
+        ];
+
+        foreach ($arOption as $code => $name){
+            $s = '';
+            if($code === $selected){
+                $s = 'selected';
+            }
+
+            $result .= '<option value="'.$code.'" '.$s.'>'.$name.'</option>';
+        }
+
+        return $result;
+    }
+
     static function showJsForSetting($inputName)
     {
         CJSCore::Init(array("jquery"));
@@ -170,23 +239,52 @@ class CIBlockPropertyCProp
             function addNewRows() {
                 $("#many-fields-table").append('' +
                     '<tr valign="top">' +
-                    '<td style="text-align: right;"><input type="text" class="inp-code" size="25"></td>' +
-                    '<td><input type="text" class="inp-title" size="50"></td>' +
+                    '<td><input type="text" class="inp-code" size="20"></td>' +
+                    '<td><input type="text" class="inp-title" size="35"></td>' +
+                    '<td><input type="text" class="inp-sort" size="5"></td>' +
+                    '<td><select class="inp-type"><?=self::getOptionList()?></select></td>' +
                     '</tr>');
             }
 
-            $(document).on('change', '.inp-code', function() {
-                var xmlId = $(this).val();
 
-                if(xmlId.length <= 0){
+            $(document).on('change', '.inp-code', function(){
+                var code = $(this).val();
+
+                if(code.length <= 0){
                     $(this).closest('tr').find('input.inp-title').removeAttr('name');
+                    $(this).closest('tr').find('input.inp-sort').removeAttr('name');
+                    $(this).closest('tr').find('select.inp-type').removeAttr('name');
                 }
                 else{
-                    $(this).closest('tr').find('input.inp-title').attr('name', '<?=$inputName?>[' + xmlId + ']');
+                    $(this).closest('tr').find('input.inp-title').attr('name', '<?=$inputName?>[' + code + '_VALUE]');
+                    $(this).closest('tr').find('input.inp-sort').attr('name', '<?=$inputName?>[' + code + '_SORT]');
+                    $(this).closest('tr').find('select.inp-type').attr('name', '<?=$inputName?>[' + code + '_TYPE]');
                 }
+            });
+
+            $(document).on('input', '.inp-sort', function(){
+                var num = $(this).val();
+                $(this).val(num.replace(/[^0-9]/gim,''));
             });
         </script>
         <?
+    }
+
+    static function showCssForSetting()
+    {
+        if(!self::$showedСss) {
+            self::$showedСss = true;
+            ?>
+            <style>
+                .many-fields-table {margin: 0 auto; /*display: inline;*/}
+                .mf-setting-title td {text-align: center!important; border-bottom: unset!important;}
+                .many-fields-table td {text-align: center;}
+                .many-fields-table > input, .many-fields-table > select{width: 90%!important;}
+                .inp-sort{text-align: center;}
+                .inp-type{min-width: 125px;}
+            </style>
+            <?
+        }
     }
 
     public static function PrepareSettings($arProperty)
