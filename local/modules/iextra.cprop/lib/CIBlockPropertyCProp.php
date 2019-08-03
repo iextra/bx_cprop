@@ -146,11 +146,18 @@ class CIBlockPropertyCProp
         return $result;
     }
 
-    public function ConvertToDB($arProperty, $value)
+    public function ConvertToDB($arProperty, $arValue)
     {
-        $isEmpty = true;
+        $arFields = self::prepareSetting($arProperty['USER_TYPE_SETTINGS']);
 
-        foreach ($value['VALUE'] as $v){
+        foreach($arValue['VALUE'] as $code => $value){
+            if($arFields[$code]['TYPE'] === 'file'){
+                $arValue['VALUE'][$code] = self::prepareFileToDB($value);
+            }
+        }
+
+        $isEmpty = true;
+        foreach ($arValue['VALUE'] as $v){
             if(!empty($v)){
                 $isEmpty = false;
                 break;
@@ -158,7 +165,7 @@ class CIBlockPropertyCProp
         }
 
         if($isEmpty === false){
-            $arResult['VALUE'] = json_encode($value['VALUE']);
+            $arResult['VALUE'] = json_encode($arValue['VALUE']);
         }
         else{
             $arResult = ['VALUE' => '', 'DESCRIPTION' => ''];
@@ -197,16 +204,43 @@ class CIBlockPropertyCProp
         return $result;
     }
 
-    private static function showFile($code, $arField, $arValue, $strHTMLControlName)
+    private static function showFile($code, $title, $arValue, $strHTMLControlName)
     {
-        //\extra::c($arValue, $code);
         $result = '';
 
-//        $v = !empty($arValue['VALUE'][$code]) ? $arValue['VALUE'][$code] : '';
-//        $result .= '<tr>
-//                    <td align="right">'.$arField['TITLE'].': </td>
-//                    <td><input type="text" value="'.$v.'" name="'.$strHTMLControlName['VALUE'].'['.$code.']"/></td>
-//                </tr>';
+        $fileId = ($arValue['VALUE'][$code]) ? $arValue['VALUE'][$code] : false;
+        if($fileId)
+        {
+            $arPicture = CFile::GetByID($fileId)->Fetch();
+            if($arPicture)
+            {
+                $strImageStorePath = COption::GetOptionString('main', 'upload_dir', 'upload');
+                $sImagePath = '/'.$strImageStorePath.'/'.$arPicture['SUBDIR'].'/'.$arPicture['FILE_NAME'];
+
+                $result = '<tr>
+                        <td align="right" valign="top">'.$title.': </td>
+                        <td>
+                            <table class="mf-img-table">
+                                <tr>
+                                    <td><img src="'.$sImagePath.'"><br>
+                                        <div>
+                                            <label><input name="'.$strHTMLControlName['VALUE'].'['.$code.'][DEL]" value="Y" type="checkbox"> Удалить файл</label>
+                                            <input name="'.$strHTMLControlName['VALUE'].'['.$code.'][OLD]" value="'.$fileId.'" type="hidden">
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>                      
+                        </td>
+                    </tr>';
+            }
+        }
+        else{
+            $v = !empty($arValue['VALUE'][$code]) ? $arValue['VALUE'][$code] : '';
+            $result .= '<tr>
+                    <td align="right">'.$title.': </td>
+                    <td><input type="file" value="'.$v.'" name="'.$strHTMLControlName['VALUE'].'['.$code.']"/></td>
+                </tr>';
+        }
 
         return $result;
     }
@@ -217,13 +251,16 @@ class CIBlockPropertyCProp
             self::$showedСss = true;
             ?>
             <style>
-                .cl{cursor: pointer;}
-                .mf-gray{color: #797777;}
-                .mf-fields-list{display: none; padding: 10px 0; margin-left: -300px!important;}
-                .mf-fields-list.active{display: block;}
-                .mf-fields-list td:first-child{width: 300px; color: #616060;}
-                .mf-fields-list td:last-child{padding-left: 5px;}
-                .mf-fields-list input[type="text"]{width: 350px!important;}
+                .cl {cursor: pointer;}
+                .mf-gray {color: #797777;}
+                .mf-fields-list {display: none; padding: 10px 0; margin-left: -300px!important;}
+                .mf-fields-list.active {display: block;}
+                .mf-fields-list td {padding-bottom: 5px;}
+                .mf-fields-list td:first-child {width: 300px; color: #616060;}
+                .mf-fields-list td:last-child {padding-left: 5px;}
+                .mf-fields-list input[type="text"] {width: 350px!important;}
+                .mf-fields-list img {max-height: 150px; margin: 5px 0;}
+                .mf-img-table {background-color: #e0e8e9; color: #616060; width: 100%;}
             </style>
             <?
         }
@@ -242,7 +279,7 @@ class CIBlockPropertyCProp
                 $(document).on('click', 'a.mf-toggle', function (e) {
                     e.preventDefault();
 
-                    var table = $(this).closest('tr').find('table');
+                    var table = $(this).closest('tr').find('table.mf-fields-list');
                     $(table).toggleClass('active');
                     if($(table).hasClass('active')){
                         $(this).text('<?=$hideText?>');
@@ -259,6 +296,8 @@ class CIBlockPropertyCProp
                     $(inputs).each(function (i, item) {
                         $(item).val('');
                     });
+
+                    $(this).closest('tr').hide('slow');
                 });
             </script>
             <?
@@ -371,6 +410,23 @@ class CIBlockPropertyCProp
             }
 
             $result .= '<option value="'.$code.'" '.$s.'>'.$name.'</option>';
+        }
+
+        return $result;
+    }
+
+    private static function prepareFileToDB($arValue)
+    {
+        $result = false;
+
+        if(!empty($arValue['DEL']) && $arValue['DEL'] === 'Y' && !empty($arValue['OLD'])){
+            CFile::Delete($arValue['OLD']);
+        }
+        else if(!empty($arValue['OLD'])){
+            $result = $arValue['OLD'];
+        }
+        else if(!empty($arValue['name'])){
+            $result = CFile::SaveFile($arValue, 'vote');
         }
 
         return $result;
