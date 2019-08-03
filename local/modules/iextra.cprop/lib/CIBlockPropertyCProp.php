@@ -18,7 +18,7 @@ class CIBlockPropertyCProp
             'ConvertToDB' => array(__CLASS__, 'ConvertToDB'),
             'ConvertFromDB' => array(__CLASS__,  'ConvertFromDB'),
             'GetSettingsHTML' => array(__CLASS__, 'GetSettingsHTML'),
-            'PrepareSettings' => array(__CLASS__, 'PrepareSettings'),
+            'PrepareSettings' => array(__CLASS__, 'PrepareUserSettings'),
             'GetLength' => array(__CLASS__, 'GetLength'),
         );
     }
@@ -49,6 +49,9 @@ class CIBlockPropertyCProp
             }
             else if($arItem['TYPE'] === 'file'){
                 $result .= self::showFile($code, $arItem['TITLE'], $value, $strHTMLControlName);
+            }
+            else if($arItem['TYPE'] === 'text'){
+                $result .= self::showTextarea($code, $arItem['TITLE'], $value, $strHTMLControlName);
             }
         }
 
@@ -124,7 +127,7 @@ class CIBlockPropertyCProp
         return $result;
     }
 
-    public static function PrepareSettings($arProperty)
+    public static function PrepareUserSettings($arProperty)
     {
         $result = [];
         if(!empty($arProperty['USER_TYPE_SETTINGS'])){
@@ -245,6 +248,19 @@ class CIBlockPropertyCProp
         return $result;
     }
 
+    public static function showTextarea($code, $title, $arValue, $strHTMLControlName)
+    {
+        $result = '';
+
+        $v = !empty($arValue['VALUE'][$code]) ? $arValue['VALUE'][$code] : '';
+        $result .= '<tr>
+                    <td align="right" valign="top">'.$title.': </td>
+                    <td><textarea rows="8" name="'.$strHTMLControlName['VALUE'].'['.$code.']">'.$v.'</textarea></td>
+                </tr>';
+
+        return $result;
+    }
+
     private static function showCss()
     {
         if(!self::$showedСss) {
@@ -259,6 +275,7 @@ class CIBlockPropertyCProp
                 .mf-fields-list td:first-child {width: 300px; color: #616060;}
                 .mf-fields-list td:last-child {padding-left: 5px;}
                 .mf-fields-list input[type="text"] {width: 350px!important;}
+                .mf-fields-list textarea {min-width: 350px; max-width: 650px; color: #000;}
                 .mf-fields-list img {max-height: 150px; margin: 5px 0;}
                 .mf-img-table {background-color: #e0e8e9; color: #616060; width: 100%;}
             </style>
@@ -400,7 +417,7 @@ class CIBlockPropertyCProp
         $arOption = [
             'string' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_STRING'),
             'file' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_FILE'),
-            'html' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_HTML')
+            'text' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_TEXT')
         ];
 
         foreach ($arOption as $code => $name){
