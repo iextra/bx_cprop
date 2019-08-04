@@ -40,7 +40,7 @@ class CIBlockPropertyCProp
 
 
         $result = '<div class="mf-gray"><a class="cl mf-toggle">'.$hideText.'</a> | <a class="cl mf-delete">'.$clearText.'</a></div>
-                    <table class="mf-fields-list active">';
+                    <table class="mf-fields-list active" style="border-bottom: 1px #e0e8ea solid;">';
 
 
         foreach ($arFields as $code => $arItem){
@@ -148,7 +148,7 @@ class CIBlockPropertyCProp
         $result = false;
         foreach($arValue['VALUE'] as $code => $value){
             if($arFields[$code]['TYPE'] === 'file'){
-                if(!empty($value['name']) || !empty($value['OLD'])){
+                if(!empty($value['name']) || (!empty($value['OLD']) && empty($value['DEL']))){
                     $result = true;
                     break;
                 }
@@ -324,7 +324,7 @@ class CIBlockPropertyCProp
             <style>
                 .cl {cursor: pointer;}
                 .mf-gray {color: #797777;}
-                .mf-fields-list {display: none; padding: 10px 0; margin-left: -300px!important;}
+                .mf-fields-list {display: none; padding-top: 10px; margin-bottom: 10px!important; margin-left: -300px!important;}
                 .mf-fields-list.active {display: block;}
                 .mf-fields-list td {padding-bottom: 5px;}
                 .mf-fields-list td:first-child {width: 300px; color: #616060;}
