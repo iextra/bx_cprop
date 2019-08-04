@@ -53,6 +53,9 @@ class CIBlockPropertyCProp
             else if($arItem['TYPE'] === 'text'){
                 $result .= self::showTextarea($code, $arItem['TITLE'], $value, $strHTMLControlName);
             }
+            else if($arItem['TYPE'] === 'date'){
+                $result .= self::showDate($code, $arItem['TITLE'], $value, $strHTMLControlName);
+            }
         }
 
         $result .= '</table>';
@@ -138,12 +141,23 @@ class CIBlockPropertyCProp
         return $result;
     }
 
-    public static function GetLength($arProperty, $value)
+    public static function GetLength($arProperty, $arValue)
     {
+        $arFields = self::prepareSetting(unserialize($arProperty['USER_TYPE_SETTINGS']));
+
         $result = false;
-        foreach($value['VALUE'] as $val){
-            if(!empty($val)){
-                $result = true;
+        foreach($arValue['VALUE'] as $code => $value){
+            if($arFields[$code]['TYPE'] === 'file'){
+                if(!empty($value['name']) || !empty($value['OLD'])){
+                    $result = true;
+                    break;
+                }
+            }
+            else{
+                if(!empty($value)){
+                    $result = true;
+                    break;
+                }
             }
         }
         return $result;
@@ -177,15 +191,15 @@ class CIBlockPropertyCProp
         return $arResult;
     }
 
-    public function ConvertFromDB($arProperty, $value)
+    public function ConvertFromDB($arProperty, $arValue)
     {
         $return = array();
 
-        if(!empty($value['VALUE'])){
-            $arData = json_decode($value['VALUE'], true);
+        if(!empty($arValue['VALUE'])){
+            $arData = json_decode($arValue['VALUE'], true);
 
-            foreach ($arData as $code => $val){
-                $return['VALUE'][$code] = $val;
+            foreach ($arData as $code => $value){
+                $return['VALUE'][$code] = $value;
             }
 
         }
@@ -211,21 +225,38 @@ class CIBlockPropertyCProp
     {
         $result = '';
 
-        $fileId = ($arValue['VALUE'][$code]) ? $arValue['VALUE'][$code] : false;
-        if($fileId)
+        if(!empty($arValue['VALUE'][$code]) && !is_array($arValue['VALUE'][$code])){
+            $fileId = $arValue['VALUE'][$code];
+        }
+        else if(!empty($arValue['VALUE'][$code]['OLD'])){
+            $fileId = $arValue['VALUE'][$code]['OLD'];
+        }
+        else{
+            $fileId = '';
+        }
+
+        if(!empty($fileId))
         {
             $arPicture = CFile::GetByID($fileId)->Fetch();
             if($arPicture)
             {
                 $strImageStorePath = COption::GetOptionString('main', 'upload_dir', 'upload');
                 $sImagePath = '/'.$strImageStorePath.'/'.$arPicture['SUBDIR'].'/'.$arPicture['FILE_NAME'];
+                $fileType = self::getExtension($sImagePath);
+
+                if(in_array($fileType, ['png', 'jpg', 'jpeg', 'gif'])){
+                    $content = '<img src="'.$sImagePath.'">';
+                }
+                else{
+                    $content = '<div class="mf-file-name">'.$arPicture['FILE_NAME'].'</div>';
+                }
 
                 $result = '<tr>
                         <td align="right" valign="top">'.$title.': </td>
                         <td>
                             <table class="mf-img-table">
                                 <tr>
-                                    <td><img src="'.$sImagePath.'"><br>
+                                    <td>'.$content.'<br>
                                         <div>
                                             <label><input name="'.$strHTMLControlName['VALUE'].'['.$code.'][DEL]" value="Y" type="checkbox"> Удалить файл</label>
                                             <input name="'.$strHTMLControlName['VALUE'].'['.$code.'][OLD]" value="'.$fileId.'" type="hidden">
@@ -238,10 +269,9 @@ class CIBlockPropertyCProp
             }
         }
         else{
-            $v = !empty($arValue['VALUE'][$code]) ? $arValue['VALUE'][$code] : '';
             $result .= '<tr>
                     <td align="right">'.$title.': </td>
-                    <td><input type="file" value="'.$v.'" name="'.$strHTMLControlName['VALUE'].'['.$code.']"/></td>
+                    <td><input type="file" value="" name="'.$strHTMLControlName['VALUE'].'['.$code.']"/></td>
                 </tr>';
         }
 
@@ -257,6 +287,31 @@ class CIBlockPropertyCProp
                     <td align="right" valign="top">'.$title.': </td>
                     <td><textarea rows="8" name="'.$strHTMLControlName['VALUE'].'['.$code.']">'.$v.'</textarea></td>
                 </tr>';
+
+        return $result;
+    }
+
+    public static function showDate($code, $title, $arValue, $strHTMLControlName)
+    {
+        $result = '';
+
+        $v = !empty($arValue['VALUE'][$code]) ? $arValue['VALUE'][$code] : '';
+        $result .= '<tr>
+                        <td align="right" valign="top">'.$title.': </td>
+                        <td>
+                            <table>
+                                <tr>
+                                    <td style="padding: 0;">
+                                        <div class="adm-input-wrap adm-input-wrap-calendar">
+                                            <input class="adm-input adm-input-calendar" type="text" name="'.$strHTMLControlName['VALUE'].'['.$code.']" size="23" value="'.$v.'">
+                                            <span class="adm-calendar-icon"
+                                                  onclick="BX.calendar({node: this, field:\''.$strHTMLControlName['VALUE'].'['.$code.']\', form: \'\', bTime: true, bHideTime: false});"></span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>';
 
         return $result;
     }
@@ -278,6 +333,8 @@ class CIBlockPropertyCProp
                 .mf-fields-list textarea {min-width: 350px; max-width: 650px; color: #000;}
                 .mf-fields-list img {max-height: 150px; margin: 5px 0;}
                 .mf-img-table {background-color: #e0e8e9; color: #616060; width: 100%;}
+                .mf-fields-list input[type="text"].adm-input-calendar {width: unset!important;}
+                .mf-file-name {word-break: break-word; padding: 5px 5px 0 0; color: #101010;}
             </style>
             <?
         }
@@ -309,9 +366,19 @@ class CIBlockPropertyCProp
                 $(document).on('click', 'a.mf-delete', function (e) {
                     e.preventDefault();
 
-                    var inputs = $(this).closest('tr').find('input');
-                    $(inputs).each(function (i, item) {
+                    var textInputs = $(this).closest('tr').find('input[type="text"]');
+                    $(textInputs).each(function (i, item) {
                         $(item).val('');
+                    });
+
+                    var textarea = $(this).closest('tr').find('textarea');
+                    $(textarea).each(function (i, item) {
+                        $(item).text('');
+                    });
+
+                    var checkBoxInputs = $(this).closest('tr').find('input[type="checkbox"]');
+                    $(checkBoxInputs).each(function (i, item) {
+                        $(item).attr('checked', 'checked');
                     });
 
                     $(this).closest('tr').hide('slow');
@@ -417,7 +484,8 @@ class CIBlockPropertyCProp
         $arOption = [
             'string' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_STRING'),
             'file' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_FILE'),
-            'text' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_TEXT')
+            'text' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_TEXT'),
+            'date' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_DATE')
         ];
 
         foreach ($arOption as $code => $name){
@@ -447,5 +515,10 @@ class CIBlockPropertyCProp
         }
 
         return $result;
+    }
+
+    private static function getExtension($filePath)
+    {
+        return array_pop(explode('.', $filePath));
     }
 }
