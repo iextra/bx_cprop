@@ -13,3 +13,4 @@ $MESS['IEX_CPROP_FIELD_TYPE_STRING'] = 'Строка';
 $MESS['IEX_CPROP_FIELD_TYPE_FILE'] = 'Файл';
 $MESS['IEX_CPROP_FIELD_TYPE_TEXT'] = 'Текст';
 $MESS['IEX_CPROP_FIELD_TYPE_DATE'] = 'Дата/Время';
+$MESS['IEX_CPROP_FIELD_TYPE_ELEMENT'] = 'Привязка к элементу';

@@ -4,7 +4,6 @@ use \Bitrix\Main\Localization\Loc;
 
 class CIBlockPropertyCProp
 {
-    private static $arFields = [];
     private static $showedСss = false;
     private static $showedJs = false;
 
@@ -40,7 +39,7 @@ class CIBlockPropertyCProp
 
 
         $result = '<div class="mf-gray"><a class="cl mf-toggle">'.$hideText.'</a> | <a class="cl mf-delete">'.$clearText.'</a></div>
-                    <table class="mf-fields-list active" style="border-bottom: 1px #e0e8ea solid;">';
+                    <table class="mf-fields-list active">';
 
 
         foreach ($arFields as $code => $arItem){
@@ -55,6 +54,9 @@ class CIBlockPropertyCProp
             }
             else if($arItem['TYPE'] === 'date'){
                 $result .= self::showDate($code, $arItem['TITLE'], $value, $strHTMLControlName);
+            }
+            else if($arItem['TYPE'] === 'element'){
+                $result .= self::showBindElement($code, $arItem['TITLE'], $value, $strHTMLControlName);
             }
         }
 
@@ -316,6 +318,32 @@ class CIBlockPropertyCProp
         return $result;
     }
 
+    public static function showBindElement($code, $title, $arValue, $strHTMLControlName)
+    {
+        $result = '';
+
+        $v = !empty($arValue['VALUE'][$code]) ? $arValue['VALUE'][$code] : '';
+
+        $elUrl = '';
+        if(!empty($v)){
+            $arElem = \CIBlockElement::GetList([], ['ID' => $v],false, ['nPageSize' => 1], ['ID', 'IBLOCK_ID', 'IBLOCK_TYPE_ID', 'NAME'])->Fetch();
+            if(!empty($arElem)){
+                $elUrl .= '<a target="_blank" href="/bitrix/admin/iblock_element_edit.php?IBLOCK_ID='.$arElem['IBLOCK_ID'].'&ID='.$arElem['ID'].'&type='.$arElem['IBLOCK_TYPE_ID'].'">'.$arElem['NAME'].'</a>';
+            }
+        }
+
+        $result .= '<tr>
+                    <td align="right">'.$title.': </td>
+                    <td>
+                        <input name="'.$strHTMLControlName['VALUE'].'['.$code.']" id="'.$strHTMLControlName['VALUE'].'['.$code.']" value="'.$v.'" size="8" type="text" class="mf-inp-bind-elem">
+                        <input type="button" value="..." onClick="jsUtils.OpenWindow(\'/bitrix/admin/iblock_element_search.php?lang=ru&IBLOCK_ID=0&n='.$strHTMLControlName['VALUE'].'&k='.$code.'\', 900, 700);">&nbsp;
+                        <span>'.$elUrl.'</span>
+                    </td>
+                </tr>';
+
+        return $result;
+    }
+
     private static function showCss()
     {
         if(!self::$showedСss) {
@@ -324,7 +352,7 @@ class CIBlockPropertyCProp
             <style>
                 .cl {cursor: pointer;}
                 .mf-gray {color: #797777;}
-                .mf-fields-list {display: none; padding-top: 10px; margin-bottom: 10px!important; margin-left: -300px!important;}
+                .mf-fields-list {display: none; padding-top: 10px; margin-bottom: 10px!important; margin-left: -300px!important; border-bottom: 1px #e0e8ea solid!important;}
                 .mf-fields-list.active {display: block;}
                 .mf-fields-list td {padding-bottom: 5px;}
                 .mf-fields-list td:first-child {width: 300px; color: #616060;}
@@ -335,6 +363,7 @@ class CIBlockPropertyCProp
                 .mf-img-table {background-color: #e0e8e9; color: #616060; width: 100%;}
                 .mf-fields-list input[type="text"].adm-input-calendar {width: unset!important;}
                 .mf-file-name {word-break: break-word; padding: 5px 5px 0 0; color: #101010;}
+                .mf-fields-list input[type="text"].mf-inp-bind-elem {width: unset!important;}
             </style>
             <?
         }
@@ -485,7 +514,8 @@ class CIBlockPropertyCProp
             'string' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_STRING'),
             'file' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_FILE'),
             'text' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_TEXT'),
-            'date' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_DATE')
+            'date' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_DATE'),
+            'element' => Loc::getMessage('IEX_CPROP_FIELD_TYPE_ELEMENT')
         ];
 
         foreach ($arOption as $code => $name){
